@@ -1,26 +1,36 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Welcome</title>
     <style>
         body {
-            font-family: Arial;
-            background-color: #f0f0f0;
-            padding: 40px;
-        }
-
-        h1 {
+            background: #f0f4f8;
+            font-family: Arial, sans-serif;
             color: #333;
+            text-align: center;
+            padding-top: 100px;
+        }
+        h1 {
+            font-size: 3em;
+            color: #007acc;
+        }
+        p {
+            font-size: 1.2em;
+            margin-top: 20px;
+        }
+        a {
+            text-decoration: none;
+            color: #007acc;
+            font-weight: bold;
+        }
+        a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
-
 <body>
-    <h1>Welcome to the Home Page</h1>
-    <p>This is the homepage of our simple Node.js app.</p>
+    <h1>Welcome to the server</h1>
+    <p>Go to the<a href="/api/users"> list of users</a></p>
 </body>
-
 </html>
