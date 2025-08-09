@@ -1,32 +1,37 @@
 [
   {
     "id": "1",
-    "name": "Aram",
-    "email": "aram_vardanyan@gmail.com"
+    "name": "Alice Johnson",
+    "age": "28",
+    "email": "alice.johnson@example.com",
+    "password": "password123"
   },
   {
     "id": "2",
-    "name": "Miro",
-    "email": "miro@gmail.com"
+    "name": "Bob Smith",
+    "age": "34",
+    "email": "bob.smith@example.com",
+    "password": "qwerty456"
   },
   {
     "id": "3",
-    "name": "Heno",
-    "email": "heno@gmail.com"
+    "name": "Charlie Brown",
+    "age": "22",
+    "email": "charlie.brown@example.com",
+    "password": "charlie789"
   },
   {
     "id": "4",
-    "name": "Arso",
-    "email": "arso@gmail.com"
+    "name": "Diana Green",
+    "age": "31",
+    "email": "diana.green@example.com",
+    "password": "greenpass"
   },
   {
     "id": "5",
-    "name": "Samo",
-    "email": "samo@gmail.com"
-  },
-  {
-    "id": 1754566045174,
-    "name": "Arman",
-    "email": "Arman@gmail.com"
+    "name": "Evan Lee",
+    "age": "27",
+    "email": "evan.lee@example.com",
+    "password": "evanlee123"
   }
 ]

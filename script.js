@@ -4,11 +4,23 @@ const path = require('path');
 const { readFile } = require('./helpers/readFile');
 const { sendResponse } = require('./helpers/sendResponse');
 
+const usersPath = () => path.join(__dirname, 'db', 'users.json');
+
+const dataBody = (req) => {
+    return new Promise((res) => {
+        let body = ''
+        req.on('data', chunk => body += chunk)
+        req.on('end', () => {
+            res(JSON.parse(body));
+        });
+    });
+}
+
 http.createServer(async (req, res) => {
 
     if (req.url === '/api/users' && req.method === 'GET') {
         const users = await readFile('db', 'users.json');
-        return sendResponse(res, 200, users);
+        return sendResponse(res, 200, JSON.parse(users));
     } else if (req.url.match(/^\/api\/users\/\d+$/) && req.method === 'GET') {
         const id = req.url.split('/').pop();
         const users = JSON.parse(await readFile('db', 'users.json'));
@@ -16,68 +28,69 @@ http.createServer(async (req, res) => {
         return user
             ? sendResponse(res, 200, user)
             : sendResponse(res, 404, { message: 'User not found' });
-    } else if (req.url.includes('?') && req.method === 'GET') {
-        const urlParams = new URLSearchParams(req.url.split('?')[1]);
-
+    } else if (req.url.startsWith('/api/users?') && req.method === 'GET') {
+        const urlParams = new URLSearchParams(req.url.split('?')[1])
+        console.log("urlParams", urlParams)
+        let users = JSON.parse(await readFile('db', 'users.json'))
         const nameValue = urlParams.get('name');
-        if (!nameValue) {
-            return sendResponse(res, 400, { message: 'Missing name parameter' });
+        const ageSort = urlParams.get('age');
+        if (nameValue) {
+            users = users.filter(u => u.name.toLowerCase().includes(nameValue.toLowerCase()));
         }
-
-        const users = JSON.parse(await readFile('db', 'users.json'));
-        const filteredUsers = users.filter(user =>
-            user.name.toLowerCase().includes(nameValue.toLowerCase())
-        );
-
-        return sendResponse(res, 200, filteredUsers);
+        if (ageSort === 'min' || ageSort === 'max') {
+            users = users.toSorted((a, b) => {
+                const ageA = a.age;
+                const ageB = b.age
+                return ageSort === 'min' ? ageA - ageB : ageB - ageA
+            });
+        };
+        return sendResponse(res, 200, users)
     } else if (req.url === '/api/users' && req.method === 'POST') {
-        let body = ''
-        req.on('data', chunk => body += chunk.toString());
-        req.on('end', async () => {
-            const newUser = JSON.parse(body);
-            const filePath = path.join(__dirname, 'db', 'users.json');
-            const users = JSON.parse(await fs.readFile(filePath, 'utf-8'));
-            newUser.id = newUser.id || Date.now()
-            users.push(newUser);
-            await fs.writeFile(filePath, JSON.stringify(users, null, 2));
-            sendResponse(res, 201, newUser);
-        });
-        return
+        const body = await dataBody(req);
+        const users = JSON.parse(await readFile('db', 'users.json'));
+        const userEmail = users.find(u => u.email === body.email);
+        if (userEmail) {
+            return sendResponse(res, 409, { message: "Email already exists" });
+        }
+        if (!body.id) {
+            body.id = Date.now().toString();
+        }
+        users.push(body);
+        await fs.writeFile(usersPath(), JSON.stringify(users));
+        return sendResponse(res, 201, { message: "User added", users });
     } else if (req.url.match(/^\/api\/users\/\d+$/) && req.method === 'PATCH') {
         const id = req.url.split('/').pop();
-        const filePath = path.join(__dirname, 'db', 'users.json');
-        const users = JSON.parse(await fs.readFile(filePath, 'utf-8'));
+        const users = JSON.parse(await readFile('db', 'users.json'));
         const userIndex = users.findIndex(u => u.id === id);
         if (userIndex === -1) {
             return sendResponse(res, 404, { message: 'User not found' });
         }
-        let body = ''
-        req.on('data', chunk => body += chunk.toString());
-        req.on('end', async () => {
-            const updates = JSON.parse(body);
-            const originalId = users[userIndex].id;
-            users[userIndex] = {
-                ...users[userIndex],
-                ...updates,
-                id: originalId
-            };
+        const updates = await dataBody(req)
 
-            await fs.writeFile(filePath, JSON.stringify(users, null, 2));
-            sendResponse(res, 200, users[userIndex]);
-        });
-        return;
+        if (updates.email && updates.email !== users[userIndex].email) {
+            const emailExist = users.find(u => u.email === updates.email);
+            if (emailExist) {
+                return sendResponse(res, 409, { message: 'Email already exists', existingUser: emailExist });
+            }
+        }
+        users[userIndex] = {
+            ...users[userIndex],
+            ...updates,
+            id: users[userIndex].id
+        };
+        await fs.writeFile(usersPath(), JSON.stringify(users));
+        return sendResponse(res, 200, users[userIndex]);
     } else if (req.url.match(/^\/api\/users\/\d+$/) && req.method === 'DELETE') {
         const id = req.url.split('/').pop();
-        const filePath = path.join(__dirname, 'db', 'users.json');
-        const users = JSON.parse(await fs.readFile(filePath, 'utf-8'));
-        const userIndex = users.findIndex(u => u.id === id)
-
+        const users = JSON.parse(await readFile('db', 'users.json'));
+        const userIndex = users.findIndex(u => u.id === id);
         if (userIndex === -1) {
             return sendResponse(res, 404, { message: 'User not found' });
         }
-        const [deletedUser] = users.splice(userIndex, 1);
-        await fs.writeFile(filePath, JSON.stringify(users, null, 2));
-        sendResponse(res, 200, {
+
+        const deletedUser = users.splice(userIndex, 1);
+        await fs.writeFile(usersPath(), JSON.stringify(users));
+        return sendResponse(res, 200, {
             message: `User with id ${id} deleted`,
             deletedUser
         });
@@ -89,8 +102,6 @@ http.createServer(async (req, res) => {
 
     const statusCode = fileName === 'error.html' ? 404 : 200;
     const html = await readFile('pages', fileName);
+    return sendResponse(res, statusCode, html, 'text/html');
 
-    return html
-        ? sendResponse(res, statusCode, html, 'text/html')
-        : sendResponse(res, 404, 'Not Found', 'text/html');
 }).listen(3000, () => console.log('Server is Running'));
